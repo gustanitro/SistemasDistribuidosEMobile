@@ -1,39 +1,97 @@
-// CRIANDO SERVIDOR DO TIPO HTTP QUE RESPONDE NA PORTA 3000
+const express = require('express');
+const fs = require("fs");
 
-const express = require('express'); // Importação do express (framework para web e APIs no Node.js)
+const app = express();
+const arquivo = 'jogos.json'
 
-const app = express(); // Instancia do objeto app na classe express, com ele podemos configurar rotas e iniciar o servidor.
+app.listen(3000, () => {
+    console.log('Servidor rodando na porta 3000')
 
-const pessoas = [ // Array que simula um banco de dados em memoria.
-    {nome: "Gustavo", idade: 20},
-    {nome: "Astrolábio", idade: 1},
-    {nome: "Arnold", idade: 3},
-    {nome: "Maria Eduarda", idade: 18},
-];
-
-// Define a rota raiz ("/"), que é acessada via método HTTP GET.
-// req é o objeto da requisição e res é o da resposta.
-// Quando alguém acessa http://localhost:3000/, será exibida a mensagem "Servidor esta funcionando corretamente" no navegador e "Alguém acionou a rota raíz" no terminal.
-app.get('/', (req, res) => {
-    console.log("Alguém acionou a rota raíz");
-    return res.send("Servidor esta funcionando corretamente");
+    // Verificando se o arquivo existe
+    fs.access(arquivo, fs.constants.F_OK, (err) => {
+        if (err) {
+            console.log(`${arquivo} não existe. Criando arquivio...`);
+            let jogosIniciais = [
+                {nome: "Batman Arkhan City", ano: 2013, categoria: "Luta"},
+                {nome: "Batman Arkhan Knight", ano: 2012, categoria: "Foda"},
+                {nome: "Batman Arkhan Origins", ano: 2014, categoria: "Luta"},
+            ];
+            let data = JSON.stringify(jogosIniciais);
+            fs.writeFileSync(arquivo, data);
+        }
+    })
 });
 
-// Rotas referentes ao CRUD de pessoas
-// /pessoas também responde a um GET.
-// Quando o usuário acessa http://localhost:3000/pessoas, o servidor responde com o JSON contendo todas as pessoas.
-app.get('/pessoas', (req,res) => {
-    return res.json(pessoas);
-});
+app.get('/', (req,res) => res.send('Servidor rodando, tudo ok. Essa é a rota raiz'));
 
-// Essa rota usa parâmetros na URL. O :id indica um valor dinâmico. Ex: http://localhost:3000/pessoas/1
-// req.params é um objeto contendo os parâmetros passados na URL.
-// pessoas[id] retorna o objeto correspondente ao índice passado.
-app.get('/pessoas/:id', (req,res) => {
-    const { id } = req.params;
-    return res.json(pessoas[id]);
-});
+// Retorno de jogos
+app.get('/jogos', (req,res) => {
+    let data = fs.readFileSync(arquivo);
+    let jogos = JSON.parse(data);
 
-//http://localhost:3000
-// Inicia o servidor na porta 3000
-app.listen(3000);
+    if (req.query.categoria) {
+        jogos = jogos.filter(jogo => jogo.categoria.toLowerCase().includes(req.query.categoria.toLowerCase()));
+    }
+
+    res.send(jogos);
+})
+
+app.get('/jogos/:id', (req, res) => {
+    let data = fs.readFileSync(arquivo);
+    let jogos = JSON.parse(data);
+    let jogo = jogos.find(jogo => jogo.id == req.params.id);
+
+    if (jogo) {
+        res.send(jogo);
+    } else {
+        res.status(404).send('Jogo não encontrado.');
+    }
+})
+
+app.post('/jogos', (req, res) => {
+    let novoJogo = req.body;
+    let data = fs.readFileSync(arquivo);
+    let jogos = JSON.parse(data);
+
+    novoJogo.id = jogos.length + 1;
+    jogos.push(novoJogo);
+
+    fs.writeFileSync(arquivo, JSON.stringify(jogos));
+    res.status(201).send(novoJogo);
+})
+
+app.put('/jogos/:id', (req, res) => {
+    let data = fs.readFileSync(arquivo);
+    let jogos = JSON.parse(data);
+    let novoValor = req.body;
+
+    let jogo = jogos.find (jogo => {
+        if (jogo.id == req.params.id) {
+            jogo.nome = novoValor.nome;
+            jogo.categoria = novoValor.categoria;
+            jogo.ano = novoValor.ano;
+            fs.writeFileSync(arquivo, JSON.stringify(jogos));
+            return jogo;
+        }
+    })
+
+    if (jogo) {
+        res.send(jogo);
+    } else {
+        res.status(404).send('Jogo não encontrado.')
+    }
+})
+
+app.delete('/jogos/:id', (req,res) => {
+    let data = fs.readFileSync(arquivo);
+    let jogos = JSON.parse(data);
+
+    if (!jogos.find(jogo => jogo.id == req.params.id)) {
+        return res.status(404).send('Jogo não encontrado.');
+    }
+
+    let jogosAtualizados = jogos.filter(jogo => jogo.id != req.params.id);
+
+    fs.writeFileSync(arquivo, JSON.stringify(jogosAtualizados));
+    res.send('Jogo removido com sucesso.');
+})
