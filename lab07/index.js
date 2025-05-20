@@ -66,3 +66,53 @@ app.delete('/jogos/:id', (req,res) => {
         res.json({ message: "Jogo removido com sucesso." });
     });
 });
+
+app.get('/empresas', (req,res) => {
+    EmpresaDAO.findAll(req.params.categoria, (err, empresas) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(empresas);
+    })
+})
+
+app.get('/empresas/:id', (req, res) => {
+    const id = req.params.id;
+    EmpresaDAO.findByID(id, (err, empresa) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (empresa) {
+            res.json(empresa);
+        } else {
+            res.status(404).json("Jogo não encontrado");
+        }
+    });
+});
+
+app.post('/empresas', (req, res) => {
+    const { nome } = req.body;
+    if (!id) return res.status(404).json("Campo nome Obrigatório.");
+
+    EmpresaDAO.create(nome, (err, empresa) => {
+        if (err) return res.status(500).json({ error:err.message });
+        res.status(201).json(empresa);
+    });
+ });
+
+ app.put('/empresas/:id', (req,res) => {
+    const { nome } = req.body;
+    const id = req.params.id;
+
+    EmpresaDAO.update(id, nome, (err, empresa) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!empresa) return res.status(404).json("Empresa não encontrado.");
+        res.json(empresa);
+    });
+ });
+
+ app.delete('/empresas/:id', (req, res) => {
+    const id = req.params.id;
+
+    EmpresaDAO.delete(id, (err, empresa) =>{
+        if (err) return res.status(500).json({ error: err.message });
+        if (!empresa) return res.status(404).json("Empresa não encontrada.");
+        res.json({message: "Empresa removida com sucesso."});
+    });
+ });
